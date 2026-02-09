@@ -1,0 +1,18 @@
+{
+  "features": [
+    "age",
+    "hr",
+    "sbp",
+    "dbp",
+    "resp_rate",
+    "temp",
+    "spo2",
+    "pain",
+    "chest_pain",
+    "sob",
+    "confusion"
+  ],
+  "target": "triage_level",
+  "model": "StandardScaler + LogisticRegression",
+  "note": "Educational triage decision-support. Not medical advice."
+}
