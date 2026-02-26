@@ -2,3 +2,11 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# ML artifacts
+data/model.joblib
+data/*.joblib
+
+# ML artifacts
+data/model.joblib
+
