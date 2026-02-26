@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Triage AI</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e3a5f, #2d6a9f);
+      color: white;
+      padding: 1.5rem 2rem;
+      text-align: center;
+    }
+    header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: 0.5px; }
+    header p { font-size: 0.85rem; opacity: 0.8; margin-top: 0.3rem; }
+
+    .container {
+      max-width: 960px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 700px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .card h2 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #2d6a9f;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-section { margin-bottom: 1.2rem; }
+    .form-section h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #718096;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.3rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+    }
+
+    .field { display: flex; flex-direction: column; }
+    .field label {
+      font-size: 0.75rem;
+      color: #4a5568;
+      margin-bottom: 0.2rem;
+      font-weight: 500;
+    }
+    .field input, .field select {
+      padding: 0.5rem 0.6rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+      background: #fafbfc;
+    }
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: #2d6a9f;
+      box-shadow: 0 0 0 2px rgba(45,106,159,0.15);
+    }
+
+    .toggles {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .toggle-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #2d6a9f;
+    }
+    .toggle-item label {
+      font-size: 0.8rem;
+      color: #4a5568;
+      cursor: pointer;
+    }
+
+    button[type="submit"], .btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, #1e3a5f, #2d6a9f);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-top: 0.5rem;
+    }
+    button[type="submit"]:hover, .btn:hover { opacity: 0.9; }
+    button[type="submit"]:disabled, .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Result panel */
+    .result-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 300px;
+      color: #a0aec0;
+      text-align: center;
+    }
+    .result-placeholder svg { width: 48px; height: 48px; margin-bottom: 0.8rem; opacity: 0.4; }
+    .result-placeholder p { font-size: 0.85rem; }
+
+    .result { display: none; }
+    .result.visible { display: block; }
+
+    .triage-badge {
+      text-align: center;
+      padding: 1.2rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+    }
+    .triage-badge .level { font-size: 2.5rem; font-weight: 800; }
+    .triage-badge .label { font-size: 0.85rem; font-weight: 600; margin-top: 0.2rem; }
+    .triage-badge .source { font-size: 0.7rem; opacity: 0.7; margin-top: 0.3rem; }
+
+    .level-1 { background: #fff5f5; color: #c53030; border: 2px solid #fc8181; }
+    .level-2 { background: #fffaf0; color: #c05621; border: 2px solid #fbd38d; }
+    .level-3 { background: #fffff0; color: #975a16; border: 2px solid #f6e05e; }
+    .level-4 { background: #f0fff4; color: #276749; border: 2px solid #9ae6b4; }
+    .level-5 { background: #ebf8ff; color: #2b6cb0; border: 2px solid #90cdf4; }
+
+    .confidence-section {
+      margin-bottom: 1rem;
+    }
+    .confidence-section .bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #718096;
+      margin-bottom: 0.3rem;
+    }
+    .confidence-section .conf-tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+      display: inline-block;
+    }
+    .conf-high { background: #c6f6d5; color: #276749; }
+    .conf-medium { background: #fefcbf; color: #975a16; }
+    .conf-low { background: #fed7d7; color: #c53030; }
+    .confidence-section .bar-track {
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .confidence-section .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    .bar-fill-high { background: #48bb78; }
+    .bar-fill-medium { background: #ecc94b; }
+    .bar-fill-low { background: #fc8181; }
+
+    .reasons-list {
+      list-style: none;
+      margin-bottom: 1rem;
+    }
+    .reasons-list li {
+      font-size: 0.8rem;
+      color: #4a5568;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid #f7fafc;
+      padding-left: 1rem;
+      position: relative;
+    }
+    .reasons-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #2d6a9f;
+    }
+
+    /* Feature contribution bars */
+    .features-section { margin-bottom: 1rem; }
+    .features-section h4 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #718096;
+      margin-bottom: 0.5rem;
+    }
+    .feat-bar {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.4rem;
+      font-size: 0.78rem;
+    }
+    .feat-bar .feat-name {
+      width: 120px;
+      color: #4a5568;
+      flex-shrink: 0;
+    }
+    .feat-bar .feat-track {
+      flex: 1;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 5px;
+      overflow: hidden;
+      margin: 0 0.5rem;
+    }
+    .feat-bar .feat-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2d6a9f, #4299e1);
+      border-radius: 5px;
+      transition: width 0.5s ease;
+    }
+    .feat-bar .feat-val {
+      width: 50px;
+      text-align: right;
+      color: #718096;
+      font-size: 0.72rem;
+    }
+
+    .inconsistency-warning {
+      background: #fffaf0;
+      border: 1px solid #fbd38d;
+      border-radius: 6px;
+      padding: 0.6rem 0.8rem;
+      font-size: 0.78rem;
+      color: #975a16;
+      margin-bottom: 1rem;
+    }
+
+    .disclaimer {
+      font-size: 0.7rem;
+      color: #a0aec0;
+      text-align: center;
+      font-style: italic;
+      padding-top: 0.5rem;
+      border-top: 1px solid #f7fafc;
+    }
+
+    .error-msg {
+      background: #fff5f5;
+      border: 1px solid #fc8181;
+      border-radius: 6px;
+      padding: 0.6rem 0.8rem;
+      font-size: 0.8rem;
+      color: #c53030;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 0.4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* History panel */
+    .history-section {
+      grid-column: 1 / -1;
+    }
+    .history-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+    .history-toggle .arrow {
+      transition: transform 0.2s;
+      font-size: 0.8rem;
+      color: #718096;
+    }
+    .history-toggle .arrow.open { transform: rotate(90deg); }
+    .history-body {
+      display: none;
+      margin-top: 1rem;
+    }
+    .history-body.visible { display: block; }
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+    .history-table th {
+      text-align: left;
+      padding: 0.5rem;
+      border-bottom: 2px solid #e2e8f0;
+      color: #718096;
+      font-weight: 600;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+    }
+    .history-table td {
+      padding: 0.5rem;
+      border-bottom: 1px solid #f7fafc;
+      color: #4a5568;
+    }
+    .history-lvl {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Triage AI</h1>
+  <p>Aide au triage par intelligence artificielle</p>
+</header>
+
+<div class="container">
+  <!-- Form -->
+  <div class="card">
+    <h2>Patient</h2>
+    <form id="triageForm">
+      <div class="form-section">
+        <h3>Informations</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label for="age">Age</label>
+            <input type="number" id="age" name="age" min="0" max="120" value="45" required>
+          </div>
+          <div class="field">
+            <label for="pain">Douleur (0-10)</label>
+            <input type="number" id="pain" name="pain" min="0" max="10" value="5" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Signes vitaux</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label for="hr">FC (bpm)</label>
+            <input type="number" id="hr" name="hr" min="20" max="250" value="80" required>
+          </div>
+          <div class="field">
+            <label for="sbp">PAS (mmHg)</label>
+            <input type="number" id="sbp" name="sbp" min="40" max="300" value="120" required>
+          </div>
+          <div class="field">
+            <label for="dbp">PAD (mmHg)</label>
+            <input type="number" id="dbp" name="dbp" min="20" max="200" value="80" required>
+          </div>
+          <div class="field">
+            <label for="resp_rate">FR (resp/min)</label>
+            <input type="number" id="resp_rate" name="resp_rate" min="4" max="70" value="16" required>
+          </div>
+          <div class="field">
+            <label for="temp">Temp. (C)</label>
+            <input type="number" id="temp" name="temp" min="30" max="45" step="0.1" value="37.0" required>
+          </div>
+          <div class="field">
+            <label for="spo2">SpO2 (%)</label>
+            <input type="number" id="spo2" name="spo2" min="50" max="100" value="98" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Symptomes</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label for="chest_pain_severity">Douleur thoracique</label>
+            <select id="chest_pain_severity" name="chest_pain_severity">
+              <option value="0">0 - Aucune</option>
+              <option value="1">1 - Legere</option>
+              <option value="2">2 - Moderee</option>
+              <option value="3">3 - Severe</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="sob_severity">Dyspnee</label>
+            <select id="sob_severity" name="sob_severity">
+              <option value="0">0 - Aucune</option>
+              <option value="1">1 - Legere</option>
+              <option value="2">2 - Moderee</option>
+              <option value="3">3 - Severe</option>
+            </select>
+          </div>
+        </div>
+        <div class="toggles" style="margin-top: 0.6rem;">
+          <div class="toggle-item">
+            <input type="checkbox" id="confusion" name="confusion">
+            <label for="confusion">Confusion</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Antecedents</h3>
+        <div class="toggles">
+          <div class="toggle-item">
+            <input type="checkbox" id="comorbidity_cardiac" name="comorbidity_cardiac">
+            <label for="comorbidity_cardiac">Cardiopathie</label>
+          </div>
+          <div class="toggle-item">
+            <input type="checkbox" id="comorbidity_respiratory" name="comorbidity_respiratory">
+            <label for="comorbidity_respiratory">BPCO / Asthme</label>
+          </div>
+          <div class="toggle-item">
+            <input type="checkbox" id="comorbidity_diabetes" name="comorbidity_diabetes">
+            <label for="comorbidity_diabetes">Diabete</label>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn">Analyser</button>
+    </form>
+  </div>
+
+  <!-- Results -->
+  <div class="card">
+    <h2>Resultat</h2>
+
+    <div class="result-placeholder" id="placeholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M9 12h6m-3-3v6m-7 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+      <p>Remplissez le formulaire et<br>cliquez sur <strong>Analyser</strong></p>
+    </div>
+
+    <div class="error-msg" id="error"></div>
+
+    <div class="result" id="result">
+      <div class="triage-badge" id="badge">
+        <div class="level" id="triageLevel"></div>
+        <div class="label" id="triageLabel"></div>
+        <div class="source" id="triageSource"></div>
+      </div>
+
+      <div class="confidence-section">
+        <div class="bar-label">
+          <span>Confiance <span class="conf-tag" id="confTag"></span></span>
+          <span id="confValue"></span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" id="confBar"></div>
+        </div>
+      </div>
+
+      <div class="inconsistency-warning" id="inconsistencyWarn" style="display:none"></div>
+
+      <div class="features-section" id="featuresSection" style="display:none">
+        <h4>Facteurs principaux</h4>
+        <div id="featuresContainer"></div>
+      </div>
+
+      <ul class="reasons-list" id="reasons"></ul>
+
+      <div class="disclaimer" id="disclaimer"></div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="card history-section">
+    <div class="history-toggle" id="historyToggle">
+      <h2 style="margin-bottom:0">Historique des predictions</h2>
+      <span class="arrow" id="historyArrow">&#9654;</span>
+    </div>
+    <div class="history-body" id="historyBody">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Heure</th>
+            <th>Niveau</th>
+            <th>Source</th>
+            <th>Confiance</th>
+            <th>Age</th>
+            <th>FC</th>
+            <th>SpO2</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody"></tbody>
+      </table>
+      <p id="historyEmpty" style="text-align:center; color:#a0aec0; font-size:0.8rem; padding:1rem; display:none;">
+        Aucune prediction enregistree.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+const LABELS = {
+  1: 'Critique - Immediat',
+  2: 'Urgent',
+  3: 'Semi-urgent',
+  4: 'Peu urgent',
+  5: 'Non urgent'
+};
+
+const LEVEL_COLORS = {
+  1: '#c53030', 2: '#c05621', 3: '#975a16', 4: '#276749', 5: '#2b6cb0'
+};
+
+const FEAT_LABELS = {
+  age: 'Age', hr: 'Freq. cardiaque', sbp: 'PAS', dbp: 'PAD',
+  resp_rate: 'Freq. respi', temp: 'Temperature', spo2: 'SpO2',
+  pain: 'Douleur', chest_pain_severity: 'DT (sev)', sob_severity: 'Dyspnee (sev)',
+  confusion: 'Confusion', comorbidity_cardiac: 'ATCD cardiaque',
+  comorbidity_respiratory: 'ATCD respi', comorbidity_diabetes: 'Diabete',
+  num_comorbidities: 'Nb comorbidites'
+};
+
+const form = document.getElementById('triageForm');
+const submitBtn = document.getElementById('submitBtn');
+const placeholder = document.getElementById('placeholder');
+const resultDiv = document.getElementById('result');
+const errorDiv = document.getElementById('error');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const data = {
+    age: +document.getElementById('age').value,
+    hr: +document.getElementById('hr').value,
+    sbp: +document.getElementById('sbp').value,
+    dbp: +document.getElementById('dbp').value,
+    resp_rate: +document.getElementById('resp_rate').value,
+    temp: +document.getElementById('temp').value,
+    spo2: +document.getElementById('spo2').value,
+    pain: +document.getElementById('pain').value,
+    chest_pain_severity: +document.getElementById('chest_pain_severity').value,
+    sob_severity: +document.getElementById('sob_severity').value,
+    confusion: document.getElementById('confusion').checked ? 1 : 0,
+    comorbidity_cardiac: document.getElementById('comorbidity_cardiac').checked ? 1 : 0,
+    comorbidity_respiratory: document.getElementById('comorbidity_respiratory').checked ? 1 : 0,
+    comorbidity_diabetes: document.getElementById('comorbidity_diabetes').checked ? 1 : 0,
+  };
+
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="spinner"></span>Analyse...';
+  errorDiv.classList.remove('visible');
+  resultDiv.classList.remove('visible');
+  placeholder.style.display = 'none';
+
+  try {
+    const res = await fetch('/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Erreur ${res.status}`);
+    }
+
+    const r = await res.json();
+    showResult(r);
+  } catch (err) {
+    errorDiv.textContent = `Erreur : ${err.message}`;
+    errorDiv.classList.add('visible');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Analyser';
+  }
+});
+
+function showResult(r) {
+  const lvl = r.triage_level;
+
+  // Badge
+  const badge = document.getElementById('badge');
+  badge.className = `triage-badge level-${lvl}`;
+  document.getElementById('triageLevel').textContent = `Niveau ${lvl}`;
+  document.getElementById('triageLabel').textContent = LABELS[lvl] || '';
+  document.getElementById('triageSource').textContent =
+    r.source === 'rules' ? 'Decide par regles de securite' : 'Prediction par modele ML';
+
+  // Confidence with colored label
+  const pct = Math.round(r.confidence * 100);
+  document.getElementById('confValue').textContent = `${pct}%`;
+  const confBar = document.getElementById('confBar');
+  confBar.style.width = `${pct}%`;
+
+  const confTag = document.getElementById('confTag');
+  const confLabel = r.confidence_label || (pct >= 75 ? 'Elevee' : pct >= 50 ? 'Moderee' : 'Faible');
+  confTag.textContent = confLabel;
+
+  confBar.className = 'bar-fill';
+  confTag.className = 'conf-tag';
+  if (pct >= 75) {
+    confBar.classList.add('bar-fill-high');
+    confTag.classList.add('conf-high');
+  } else if (pct >= 50) {
+    confBar.classList.add('bar-fill-medium');
+    confTag.classList.add('conf-medium');
+  } else {
+    confBar.classList.add('bar-fill-low');
+    confTag.classList.add('conf-low');
+  }
+
+  // Inconsistency
+  const incWarn = document.getElementById('inconsistencyWarn');
+  if (r.inconsistency >= 0.5) {
+    incWarn.textContent = `Inconsistance detectee (score: ${r.inconsistency}) — les symptomes rapportes ne correspondent pas aux signes vitaux.`;
+    incWarn.style.display = 'block';
+  } else {
+    incWarn.style.display = 'none';
+  }
+
+  // Feature contributions
+  const featSection = document.getElementById('featuresSection');
+  const featContainer = document.getElementById('featuresContainer');
+  featContainer.innerHTML = '';
+
+  if (r.top_features && r.top_features.length > 0) {
+    featSection.style.display = 'block';
+    const maxImp = Math.max(...r.top_features.map(f => f.importance));
+
+    r.top_features.forEach(f => {
+      const pctFeat = Math.round((f.importance / maxImp) * 100);
+      const label = FEAT_LABELS[f.feature] || f.feature;
+      const div = document.createElement('div');
+      div.className = 'feat-bar';
+      div.innerHTML = `
+        <span class="feat-name">${label}</span>
+        <div class="feat-track"><div class="feat-fill" style="width:${pctFeat}%"></div></div>
+        <span class="feat-val">${f.value}</span>
+      `;
+      featContainer.appendChild(div);
+    });
+  } else {
+    featSection.style.display = 'none';
+  }
+
+  // Reasons
+  const reasonsList = document.getElementById('reasons');
+  reasonsList.innerHTML = '';
+  r.reasons.forEach(reason => {
+    const li = document.createElement('li');
+    li.textContent = reason;
+    reasonsList.appendChild(li);
+  });
+
+  // Disclaimer
+  document.getElementById('disclaimer').textContent = r.disclaimer;
+
+  resultDiv.classList.add('visible');
+}
+
+// --- History panel ---
+const historyToggle = document.getElementById('historyToggle');
+const historyBody = document.getElementById('historyBody');
+const historyArrow = document.getElementById('historyArrow');
+
+historyToggle.addEventListener('click', () => {
+  const isOpen = historyBody.classList.toggle('visible');
+  historyArrow.classList.toggle('open', isOpen);
+  if (isOpen) loadHistory();
+});
+
+async function loadHistory() {
+  try {
+    const res = await fetch('/history?limit=20');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const tbody = document.getElementById('historyTableBody');
+    const emptyMsg = document.getElementById('historyEmpty');
+    tbody.innerHTML = '';
+
+    if (!data || data.length === 0) {
+      emptyMsg.style.display = 'block';
+      return;
+    }
+    emptyMsg.style.display = 'none';
+
+    data.forEach(entry => {
+      const tr = document.createElement('tr');
+      const ts = new Date(entry.timestamp);
+      const time = ts.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      const lvl = entry.result.triage_level;
+      const src = entry.result.source === 'rules' ? 'Regles' : 'ML';
+      const conf = Math.round((entry.result.confidence || 0) * 100);
+      const age = entry.input.age || '-';
+      const hr = entry.input.hr || '-';
+      const spo2 = entry.input.spo2 || '-';
+      const color = LEVEL_COLORS[lvl] || '#718096';
+
+      tr.innerHTML = `
+        <td>${time}</td>
+        <td><span class="history-lvl level-${lvl}" style="color:${color}">${lvl}</span></td>
+        <td>${src}</td>
+        <td>${conf}%</td>
+        <td>${age}</td>
+        <td>${hr}</td>
+        <td>${spo2}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    console.error('Failed to load history:', e);
+  }
+}
+</script>
+
+</body>
+</html>

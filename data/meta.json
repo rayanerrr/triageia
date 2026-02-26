@@ -8,11 +8,93 @@
     "temp",
     "spo2",
     "pain",
-    "chest_pain",
-    "sob",
-    "confusion"
+    "chest_pain_severity",
+    "sob_severity",
+    "confusion",
+    "comorbidity_cardiac",
+    "comorbidity_respiratory",
+    "comorbidity_diabetes",
+    "num_comorbidities"
   ],
   "target": "triage_level",
-  "model": "StandardScaler + LogisticRegression",
+  "model": "CalibratedClassifierCV(VotingClassifier(GradientBoosting + RandomForest))",
+  "n_train": 40000,
+  "n_test": 10000,
+  "best_cv_score": 0.7442,
+  "best_params": {
+    "clf__gb__learning_rate": 0.10618101782710437,
+    "clf__gb__max_depth": 4,
+    "clf__gb__min_samples_split": 19,
+    "clf__gb__n_estimators": 206,
+    "clf__gb__subsample": 0.9339073000818308,
+    "clf__rf__max_depth": 12,
+    "clf__rf__min_samples_split": 11,
+    "clf__rf__n_estimators": 221
+  },
+  "classification_report": {
+    "1": {
+      "precision": 0.9121,
+      "recall": 0.8275,
+      "f1-score": 0.8677,
+      "support": 777.0
+    },
+    "2": {
+      "precision": 0.7522,
+      "recall": 0.782,
+      "f1-score": 0.7668,
+      "support": 1211.0
+    },
+    "3": {
+      "precision": 0.6543,
+      "recall": 0.6368,
+      "f1-score": 0.6454,
+      "support": 1988.0
+    },
+    "4": {
+      "precision": 0.5519,
+      "recall": 0.5747,
+      "f1-score": 0.563,
+      "support": 3054.0
+    },
+    "5": {
+      "precision": 0.6929,
+      "recall": 0.6815,
+      "f1-score": 0.6871,
+      "support": 2970.0
+    },
+    "accuracy": 0.6635,
+    "macro avg": {
+      "precision": 0.7127,
+      "recall": 0.7005,
+      "f1-score": 0.706,
+      "support": 10000.0
+    },
+    "weighted avg": {
+      "precision": 0.6664,
+      "recall": 0.6635,
+      "f1-score": 0.6646,
+      "support": 10000.0
+    }
+  },
+  "recall_L1": 0.8275,
+  "recall_L2": 0.782,
+  "feature_importance": {
+    "resp_rate": 0.2009,
+    "spo2": 0.19,
+    "sbp": 0.1292,
+    "hr": 0.1245,
+    "age": 0.0804,
+    "sob_severity": 0.0646,
+    "confusion": 0.0557,
+    "chest_pain_severity": 0.0401,
+    "dbp": 0.0351,
+    "temp": 0.0338,
+    "pain": 0.0183,
+    "num_comorbidities": 0.0141,
+    "comorbidity_cardiac": 0.009,
+    "comorbidity_respiratory": 0.003,
+    "comorbidity_diabetes": 0.0014
+  },
+  "training_time_seconds": 1031.4,
   "note": "Educational triage decision-support. Not medical advice."
 }
